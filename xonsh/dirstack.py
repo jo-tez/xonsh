@@ -18,7 +18,7 @@ _unc_tempDrives = {}
 
 
 def _unc_check_enabled() -> bool:
-    """Check whether CMD.EXE is enforcing no-UNC-as-working-directory check.
+    r"""Check whether CMD.EXE is enforcing no-UNC-as-working-directory check.
 
     Check can be disabled by setting {HKCU, HKLM}/SOFTWARE\Microsoft\Command Processor\DisableUNCCheck:REG_DWORD=1
 
@@ -65,8 +65,7 @@ def _is_unc_path(some_path) -> bool:
 
 
 def _unc_map_temp_drive(unc_path) -> str:
-
-    """Map a new temporary drive letter for each distinct share,
+    r"""Map a new temporary drive letter for each distinct share,
     unless `CMD.EXE` is not insisting on non-UNC working directory.
 
     Emulating behavior of `CMD.EXE` `pushd`, create a new mapped drive (starting from Z: towards A:, skipping existing
@@ -110,7 +109,7 @@ def _unc_unmap_temp_drive(left_drive, cwd):
     Args:
         left_drive: driveletter (and colon) of working directory we just left
         cwd: full path of new current working directory
-"""
+    """
 
     global _unc_tempDrives
 
@@ -145,7 +144,7 @@ def _get_cwd():
 
 
 def _change_working_directory(newdir, follow_symlinks=False):
-    env = builtins.__xonsh_env__
+    env = builtins.__xonsh__.env
     old = env["PWD"]
     new = os.path.join(old, newdir)
     absnew = os.path.abspath(new)
@@ -180,10 +179,10 @@ def _try_cdpath(apath):
     # a second $ cd xonsh has no effects, to move in the nested xonsh
     # in bash a full $ cd ./xonsh is needed.
     # In xonsh a relative folder is always preferred.
-    env = builtins.__xonsh_env__
+    env = builtins.__xonsh__.env
     cdpaths = env.get("CDPATH")
     for cdp in cdpaths:
-        globber = builtins.__xonsh_expand_path__(os.path.join(cdp, apath))
+        globber = builtins.__xonsh__.expand_path(os.path.join(cdp, apath))
         for cdpath_prefixed_path in glob.iglob(globber):
             return cdpath_prefixed_path
     return apath
@@ -195,7 +194,7 @@ def cd(args, stdin=None):
     If no directory is specified (i.e. if `args` is None) then this
     changes to the current user's home directory.
     """
-    env = builtins.__xonsh_env__
+    env = builtins.__xonsh__.env
     oldpwd = env.get("OLDPWD", None)
     cwd = env["PWD"]
 
@@ -291,7 +290,7 @@ def pushd_parser():
 
 
 def pushd(args, stdin=None):
-    """xonsh command: pushd
+    r"""xonsh command: pushd
 
     Adds a directory to the top of the directory stack, or rotates the stack,
     making the new top of the stack the current working directory.
@@ -307,7 +306,7 @@ def pushd(args, stdin=None):
     except SystemExit:
         return None, None, 1
 
-    env = builtins.__xonsh_env__
+    env = builtins.__xonsh__.env
 
     pwd = env["PWD"]
 
@@ -406,7 +405,7 @@ def popd(args, stdin=None):
     except SystemExit:
         return None, None, 1
 
-    env = builtins.__xonsh_env__
+    env = builtins.__xonsh__.env
 
     if env.get("PUSHD_MINUS"):
         BACKWARD = "-"
@@ -454,7 +453,7 @@ def popd(args, stdin=None):
     if new_pwd is not None:
         e = None
         if args.cd:
-            env = builtins.__xonsh_env__
+            env = builtins.__xonsh__.env
             pwd = env["PWD"]
 
             _change_working_directory(new_pwd)
@@ -515,7 +514,7 @@ def dirs(args, stdin=None):
     except SystemExit:
         return None, None
 
-    env = builtins.__xonsh_env__
+    env = builtins.__xonsh__.env
     dirstack = [os.path.expanduser(env["PWD"])] + DIRSTACK
 
     if env.get("PUSHD_MINUS"):

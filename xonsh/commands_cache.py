@@ -61,7 +61,7 @@ class CommandsCache(cabc.Mapping):
          name on Windows as a list, conserving the ordering in `PATHEXT`.
          Returns a list as `name` being the only item in it on other platforms."""
         if ON_WINDOWS:
-            pathext = builtins.__xonsh_env__.get("PATHEXT", [])
+            pathext = builtins.__xonsh__.env.get("PATHEXT", [])
             name = name.upper()
             return [name + ext for ext in ([""] + pathext)]
         else:
@@ -77,7 +77,7 @@ class CommandsCache(cabc.Mapping):
 
     @property
     def all_commands(self):
-        paths = builtins.__xonsh_env__.get("PATH", [])
+        paths = builtins.__xonsh__.env.get("PATH", [])
         paths = CommandsCache.remove_dups(paths)
         path_immut = tuple(x for x in paths if os.path.isdir(x))
         # did PATH change?
@@ -392,6 +392,7 @@ def default_threadable_predictors():
         "clear": predict_false,
         "cls": predict_false,
         "cmd": predict_shell,
+        "cryptop": predict_false,
         "curl": predict_true,
         "ex": predict_false,
         "emacsclient": predict_false,

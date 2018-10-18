@@ -14,7 +14,7 @@ import platform
 import functools
 import subprocess
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 
 
 @functools.lru_cache(1)
@@ -373,8 +373,8 @@ def bash_completions(
     commprefix = os.path.commonprefix(list(out))
     strip_len = 0
     strip_prefix = prefix.strip("\"'")
-    while strip_len < len(prefix):
-        if commprefix.startswith(strip_prefix[strip_len:]):
+    while strip_len < len(strip_prefix) and strip_len < len(commprefix):
+        if commprefix[strip_len] == strip_prefix[strip_len]:
             break
         strip_len += 1
 

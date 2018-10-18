@@ -854,7 +854,7 @@ def expand(path):
     ],
 )
 def test_env_path_getitem(inp, exp, xonsh_builtins, env):
-    xonsh_builtins.__xonsh_env__ = env
+    xonsh_builtins.__xonsh__.env = env
     obs = EnvPath(inp)[0]  # call to __getitem__
     if env.get("EXPAND_ENV_VARS"):
         assert expand(exp) == obs
@@ -878,7 +878,7 @@ def test_env_path_getitem(inp, exp, xonsh_builtins, env):
 )
 def test_env_path_multipath(inp, exp, xonsh_builtins, env):
     # cases that involve path-separated strings
-    xonsh_builtins.__xonsh_env__ = env
+    xonsh_builtins.__xonsh__.env = env
     if env == TOOLS_ENV:
         obs = [i for i in EnvPath(inp)]
         assert [expand(i) for i in exp] == obs
@@ -902,7 +902,7 @@ def test_env_path_multipath(inp, exp, xonsh_builtins, env):
     ],
 )
 def test_env_path_with_pathlib_path_objects(inp, exp, xonsh_builtins):
-    xonsh_builtins.__xonsh_env__ = TOOLS_ENV
+    xonsh_builtins.__xonsh__.env = TOOLS_ENV
     # iterate over EnvPath to acquire all expanded paths
     obs = [i for i in EnvPath(inp)]
     assert [expand(i) for i in exp] == obs
@@ -1195,7 +1195,7 @@ def test_is_slice_as_str(inp, exp):
         ([1, 2, 3], False),
         ((1, 2), False),
         (("wrong", "parameter"), False),
-        skip_if_on_windows(("/dev/null", True)),
+        pytest.param("/dev/null", True, marks=skip_if_on_windows),
     ],
 )
 def test_is_logfile_opt(inp, exp):
@@ -1211,14 +1211,13 @@ def test_is_logfile_opt(inp, exp):
         (1, None),
         (None, None),
         ("throwback.log", "throwback.log"),
-        skip_if_on_windows(("/dev/null", "/dev/null")),
-        skip_if_on_windows(
-            (
-                "/dev/nonexistent_dev",
-                "/dev/nonexistent_dev"
-                if is_writable_file("/dev/nonexistent_dev")
-                else None,
-            )
+        pytest.param("/dev/null", "/dev/null", marks=skip_if_on_windows),
+        pytest.param(
+            "/dev/nonexistent_dev",
+            "/dev/nonexistent_dev"
+            if is_writable_file("/dev/nonexistent_dev")
+            else None,
+            marks=skip_if_on_windows,
         ),
     ],
 )
@@ -1391,7 +1390,7 @@ def test_executables_in(xonsh_builtins):
                 if executable and not _type == "brokensymlink":
                     os.chmod(path, stat.S_IXUSR | stat.S_IRUSR | stat.S_IWUSR)
             if ON_WINDOWS:
-                xonsh_builtins.__xonsh_env__ = PATHEXT_ENV
+                xonsh_builtins.__xonsh__.env = PATHEXT_ENV
                 result = set(executables_in(test_path))
             else:
                 result = set(executables_in(test_path))
@@ -1441,7 +1440,7 @@ def test_expandvars(inp, exp, xonsh_builtins):
     env = Env(
         {"foo": "bar", "spam": "eggs", "a_bool": True, "an_int": 42, "none": None}
     )
-    xonsh_builtins.__xonsh_env__ = env
+    xonsh_builtins.__xonsh__.env = env
     assert expandvars(inp) == exp
 
 
@@ -1464,7 +1463,7 @@ def test_expandvars(inp, exp, xonsh_builtins):
     ],
 )
 def test_ensure_timestamp(inp, fmt, exp, xonsh_builtins):
-    xonsh_builtins.__xonsh_env__["XONSH_DATETIME_FORMAT"] = "%Y-%m-%d %H:%M"
+    xonsh_builtins.__xonsh__.env["XONSH_DATETIME_FORMAT"] = "%Y-%m-%d %H:%M"
     obs = ensure_timestamp(inp, fmt)
     assert exp == obs
 
@@ -1488,7 +1487,7 @@ def test_expand_path(expand_user, inp, expand_env_vars, exp_end, xonsh_builtins)
 
     env = Env({"foo": "bar", "a_bool": True, "an_int": 42, "none": None})
     env["EXPAND_ENV_VARS"] = expand_env_vars
-    xonsh_builtins.__xonsh_env__ = env
+    xonsh_builtins.__xonsh__.env = env
 
     path = expand_path(inp, expand_user=expand_user)
 

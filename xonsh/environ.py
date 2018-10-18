@@ -26,6 +26,8 @@ from xonsh.platform import (
     os_environ,
 )
 
+from xonsh.style_tools import PTK2_STYLE
+
 from xonsh.tools import (
     always_true,
     always_false,
@@ -72,6 +74,9 @@ from xonsh.tools import (
     to_itself,
     swap_values,
     ptk2_color_depth_setter,
+    is_str_str_dict,
+    to_str_str_dict,
+    dict_to_str,
 )
 import xonsh.prompt.base as prompt
 
@@ -144,8 +149,12 @@ def to_debug(x):
     execer's debug level.
     """
     val = to_bool_or_int(x)
-    if hasattr(builtins, "__xonsh_execer__"):
-        builtins.__xonsh_execer__.debug_level = val
+    if (
+        hasattr(builtins, "__xonsh__")
+        and hasattr(builtins.__xonsh__, "execer")
+        and builtins.__xonsh__.execer is not None
+    ):
+        builtins.__xonsh__.execer.debug_level = val
     return val
 
 
@@ -164,7 +173,7 @@ def DEFAULT_ENSURERS():
         "AUTO_SUGGEST_IN_COMPLETIONS": (is_bool, to_bool, bool_to_str),
         "BASH_COMPLETIONS": (is_env_path, str_to_env_path, env_path_to_str),
         "CASE_SENSITIVE_COMPLETIONS": (is_bool, to_bool, bool_to_str),
-        re.compile("\w*DIRS$"): (is_env_path, str_to_env_path, env_path_to_str),
+        re.compile(r"\w*DIRS$"): (is_env_path, str_to_env_path, env_path_to_str),
         "COLOR_INPUT": (is_bool, to_bool, bool_to_str),
         "COLOR_RESULTS": (is_bool, to_bool, bool_to_str),
         "COMPLETIONS_BRACKETS": (is_bool, to_bool, bool_to_str),
@@ -207,7 +216,7 @@ def DEFAULT_ENSURERS():
         "LOADED_RC_FILES": (is_bool_seq, csv_to_bool_seq, bool_seq_to_csv),
         "MOUSE_SUPPORT": (is_bool, to_bool, bool_to_str),
         "MULTILINE_PROMPT": (is_string_or_callable, ensure_string, ensure_string),
-        re.compile("\w*PATH$"): (is_env_path, str_to_env_path, env_path_to_str),
+        re.compile(r"\w*PATH$"): (is_env_path, str_to_env_path, env_path_to_str),
         "PATHEXT": (
             is_nonstring_seq_of_strings,
             pathsep_to_upper_seq,
@@ -222,6 +231,7 @@ def DEFAULT_ENSURERS():
         ),
         "PUSHD_MINUS": (is_bool, to_bool, bool_to_str),
         "PUSHD_SILENT": (is_bool, to_bool, bool_to_str),
+        "PTK_STYLE_OVERRIDES": (is_str_str_dict, to_str_str_dict, dict_to_str),
         "RAISE_SUBPROC_ERROR": (is_bool, to_bool, bool_to_str),
         "RIGHT_PROMPT": (is_string_or_callable, ensure_string, ensure_string),
         "BOTTOM_TOOLBAR": (is_string_or_callable, ensure_string, ensure_string),
@@ -386,6 +396,7 @@ def DEFAULT_VALUES():
         "PRETTY_PRINT_RESULTS": True,
         "PROMPT": prompt.default_prompt(),
         "PROMPT_TOOLKIT_COLOR_DEPTH": "",
+        "PTK_STYLE_OVERRIDES": dict(PTK2_STYLE),
         "PUSHD_MINUS": False,
         "PUSHD_SILENT": False,
         "RAISE_SUBPROC_ERROR": False,
@@ -671,6 +682,9 @@ def DEFAULT_DOCS():
             "``DEPTH_1_BIT``, ``DEPTH_4_BIT``, ``DEPTH_8_BIT``, ``DEPTH_24_BIT`` "
             "colors. Default is an empty string which means that prompt toolkit decide."
         ),
+        "PTK_STYLE_OVERRIDES": VarDocs(
+            "A dictionary containing custom prompt_toolkit style definitions."
+        ),
         "PUSHD_MINUS": VarDocs(
             "Flag for directory pushing functionality. False is the normal " "behavior."
         ),
@@ -761,7 +775,7 @@ def DEFAULT_DOCS():
         "UPDATE_OS_ENVIRON": VarDocs(
             "If True ``os_environ`` will always be updated "
             "when the xonsh environment changes. The environment can be reset to "
-            "the default value by calling ``__xonsh_env__.undo_replace_env()``"
+            "the default value by calling ``__xonsh__.env.undo_replace_env()``"
         ),
         "UPDATE_PROMPT_ON_KEYPRESS": VarDocs(
             "Disables caching the prompt between commands, "
@@ -1222,7 +1236,7 @@ def _yield_executables(directory, name):
 
 def locate_binary(name):
     """Locates an executable on the file system."""
-    return builtins.__xonsh_commands_cache__.locate_binary(name)
+    return builtins.__xonsh__.commands_cache.locate_binary(name)
 
 
 BASE_ENV = LazyObject(
