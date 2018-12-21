@@ -64,6 +64,7 @@ from xonsh.tools import (
     is_balanced,
     subexpr_before_unbalanced,
     swap_values,
+    get_line_continuation,
     get_logical_line,
     replace_logical_line,
     check_quotes,
@@ -374,6 +375,29 @@ def test_subproc_toks_pyeval_nested():
     assert exp == obs
 
 
+@pytest.mark.parametrize('phrase', [
+    'xandy',
+    'xory',
+    'xand',
+    'andy',
+    'xor',
+    'ory',
+    'x-and',
+    'x-or',
+    'and-y',
+    'or-y',
+    'x-and-y',
+    'x-or-y',
+    'in/and/path',
+    'in/or/path',
+])
+def test_subproc_toks_and_or(phrase):
+    s = "echo " + phrase
+    exp = "![{0}]".format(s)
+    obs = subproc_toks(s, lexer=LEXER, returnline=True)
+    assert exp == obs
+
+
 def test_subproc_toks_pyeval_nested_parens():
     s = "echo @(min(1, 42))"
     inp = "({0})".format(s)
@@ -498,7 +522,8 @@ def test_replace_logical_line(src, idx, exp_line, exp_n):
         idx -= 1
     replace_logical_line(lines, logical, idx, exp_n)
     exp = src.replace("\\\n", "").strip()
-    obs = "\n".join(lines).replace("\\\n", "").strip()
+    lc = get_line_continuation() + "\n"
+    obs = "\n".join(lines).replace(lc, "").strip()
     assert exp == obs
 
 

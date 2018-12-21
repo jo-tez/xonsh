@@ -863,7 +863,7 @@ def _should_set_title(captured=False):
         env.get("XONSH_INTERACTIVE")
         and not env.get("XONSH_STORE_STDOUT")
         and captured not in STDOUT_CAPTURE_KINDS
-        and hasattr(builtins.__xonsh__, "shell")
+        and builtins.__xonsh__.shell is not None
     )
 
 
@@ -1465,6 +1465,7 @@ class DeprecationWarningProxy:
                 self.oldname, self.newname
             ),
             DeprecationWarning,
+            stacklevel=3,
         )
 
     def __getattr__(self, name):

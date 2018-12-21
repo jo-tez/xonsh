@@ -13,12 +13,13 @@ try:
 except ImportError:
     from xonsh.ply.ply import yacc
 
+from xonsh.tools import FORMATTER
 from xonsh import ast
 from xonsh.ast import has_elts, xonsh_call, load_attribute_chain
 from xonsh.lexer import Lexer, LexToken
 from xonsh.platform import PYTHON_VERSION_INFO
 from xonsh.tokenize import SearchPath, StringPrefix
-from xonsh.lazyasd import LazyObject
+from xonsh.lazyasd import LazyObject, lazyobject
 from xonsh.parsers.context_check import check_contexts
 
 
@@ -26,9 +27,11 @@ RE_SEARCHPATH = LazyObject(lambda: re.compile(SearchPath), globals(), "RE_SEARCH
 RE_STRINGPREFIX = LazyObject(
     lambda: re.compile(StringPrefix), globals(), "RE_STRINGPREFIX"
 )
-RE_FSTR_ENVVAR = LazyObject(
-    lambda: re.compile(r"\{\s*\$(\w+)"), globals(), "RE_FSTR_ENVVAR"
-)
+
+
+@lazyobject
+def RE_FSTR_EVAL_CHARS():
+    return re.compile(".*?[!@$`]")
 
 
 class Location(object):
@@ -211,24 +214,47 @@ def hasglobstar(x):
         return False
 
 
-def _repl_sub_env_vars_single(matchobj):
-    return "{__xonsh__.env.detype()['" + matchobj.group(1) + "']"
+def _wrap_fstr_field(field, spec, conv):
+    rtn = "{" + field
+    if conv:
+        rtn += "!" + conv
+    if spec:
+        rtn += ":" + spec
+    rtn += "}"
+    return rtn
 
 
-def _repl_sub_env_vars_double(matchobj):
-    return '{__xonsh__.env.detype()["' + matchobj.group(1) + '"]'
-
-
-def sub_env_vars(fstring):
-    """Takes an fstring that may contain environment variables and
-    substitues them for a valid environment lookup call. Roughly,
+def eval_fstr_fields(fstring, prefix, filename=None):
+    """Takes an fstring (and its prefix, ie f") that may contain
+    xonsh expressions as its field values and
+    substitues them for a xonsh eval() call as needed. Roughly,
     for example, this will take f"{$HOME}" and transform it to
-    be f"{__xonsh__.env.detype()['HOME']}".
+    be f"{__xonsh__.execer.eval(r'$HOME')}".
     """
-    repl = (
-        _repl_sub_env_vars_single if fstring[-1] == '"' else _repl_sub_env_vars_double
-    )
-    return RE_FSTR_ENVVAR.sub(repl, fstring)
+    last = fstring[-1]
+    q, r = ("'", r"\'") if last == '"' else ('"', r"\"")
+    prelen = len(prefix)
+    postlen = len(fstring) - len(fstring.rstrip(last))
+    template = fstring[prelen:-postlen]
+    repl = prefix
+    for literal, field, spec, conv in FORMATTER.parse(template):
+        repl += literal
+        if field is None:
+            continue
+        elif RE_FSTR_EVAL_CHARS.match(field) is None:
+            # just a normal python field, simply reconstruct.
+            repl += _wrap_fstr_field(field, spec, conv)
+        else:
+            # the field has a special xonsh character, so we must eval it
+            eval_field = "__xonsh__.execer.eval(r" + q
+            eval_field += field.lstrip().replace(q, r)
+            eval_field += q + ", glbs=globals(), locs=locals()"
+            if filename is not None:
+                eval_field += ", filename=" + q + filename + q
+            eval_field += ")"
+            repl += _wrap_fstr_field(eval_field, spec, conv)
+    repl += last * postlen
+    return repl
 
 
 class YaccLoader(Thread):
@@ -1399,7 +1425,7 @@ class BaseParser(object):
         p[0] = p[1]
 
     def p_import_from_post_paren(self, p):
-        """import_from_post : LPAREN import_as_names RPAREN"""
+        """import_from_post : LPAREN import_as_names"""
         p[0] = p[2]
 
     def p_import_from(self, p):
@@ -1433,6 +1459,10 @@ class BaseParser(object):
         """
         p[0] = [p[2]]
 
+    def p_comma_import_as_name_tail(self, p):
+        """comma_import_as_name : comma_opt RPAREN"""
+        p[0] = list()
+
     def p_dotted_as_name(self, p):
         """dotted_as_name : dotted_name as_name_opt"""
         p0 = ast.alias(name=p[1], asname=p[2])
@@ -1443,8 +1473,7 @@ class BaseParser(object):
         p[0] = [p[2]]
 
     def p_import_as_names(self, p):
-        """import_as_names : import_as_name comma_import_as_name_list_opt comma_opt
-        """
+        """import_as_names : import_as_name comma_import_as_name_list_opt"""
         p1, p2 = p[1], p[2]
         p0 = [p1]
         if p2 is not None:
@@ -2405,7 +2434,7 @@ class BaseParser(object):
                 "__xonsh__.path_literal", [s], lineno=p1.lineno, col=p1.lexpos
             )
         elif "f" in prefix or "F" in prefix:
-            s = sub_env_vars(p1.value)
+            s = eval_fstr_fields(p1.value, prefix, filename=self.lexer.fname)
             s = pyparse(s).body[0].value
             s = ast.increment_lineno(s, p1.lineno - 1)
             p[0] = s

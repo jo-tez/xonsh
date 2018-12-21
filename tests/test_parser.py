@@ -9,7 +9,7 @@ import pytest
 
 from xonsh.ast import AST, With, Pass, pdump
 from xonsh.parser import Parser
-from xonsh.parsers.base import sub_env_vars
+from xonsh.parsers.base import eval_fstr_fields
 
 from tools import VER_FULL, skip_if_py34, skip_if_lt_py36, nodes_equal
 
@@ -133,14 +133,25 @@ def test_f_env_var():
 @pytest.mark.parametrize(
     "inp, exp",
     [
-        ('f"{$HOME}"', "f\"{__xonsh__.env.detype()['HOME']}\""),
-        ('f"{ $HOME }"', "f\"{__xonsh__.env.detype()['HOME'] }\""),
-        ("f\"{'$HOME'}\"", "f\"{'$HOME'}\""),
+        ('f"{}"', 'f"{}"'),
         ('f"$HOME"', 'f"$HOME"'),
+        ('f"{0} - {1}"', 'f"{0} - {1}"'),
+        (
+            'f"{$HOME}"',
+            "f\"{__xonsh__.execer.eval(r'$HOME', glbs=globals(), locs=locals())}\"",
+        ),
+        (
+            'f"{ $HOME }"',
+            "f\"{__xonsh__.execer.eval(r'$HOME ', glbs=globals(), locs=locals())}\"",
+        ),
+        (
+            "f\"{'$HOME'}\"",
+            "f\"{__xonsh__.execer.eval(r'\\'$HOME\\'', glbs=globals(), locs=locals())}\"",
+        ),
     ],
 )
-def test_sub_env_vars(inp, exp):
-    obs = sub_env_vars(inp)
+def test_eval_fstr_fields(inp, exp):
+    obs = eval_fstr_fields(inp, 'f"')
     assert exp == obs
 
 
@@ -1343,6 +1354,11 @@ def test_equals_attr():
     check_stmts("class X(object):\n  pass\nx = X()\nx.a = 65")
 
 
+@skip_if_lt_py36
+def test_equals_annotation():
+    check_stmts("x : int = 42")
+
+
 def test_dict_keys():
     check_stmts('x = {"x": 1}\nx.keys()')
 
@@ -1473,6 +1489,14 @@ def test_from_dot_import_x_as_y():
 
 def test_from_x_import_star():
     check_stmts("from x import *", False)
+
+
+def test_from_x_import_group_x_y_z():
+    check_stmts("from x import (x, y, z)", False)
+
+
+def test_from_x_import_group_x_y_z_comma():
+    check_stmts("from x import (x, y, z,)", False)
 
 
 def test_from_x_import_y_as_z():
@@ -1976,8 +2000,10 @@ def test_function_blank_line():
         "def foo():\n"
         "    ascii_art = [\n"
         '        "(╯°□°）╯︵ ┻━┻",\n'
-        r'        "¯\\_(ツ)_/¯",' '\n'
-        r'        "┻━┻︵ \\(°□°)/ ︵ ┻━┻",' '\n'
+        r'        "¯\\_(ツ)_/¯",'
+        "\n"
+        r'        "┻━┻︵ \\(°□°)/ ︵ ┻━┻",'
+        "\n"
         "    ]\n"
         "\n"
         "    import random\n"

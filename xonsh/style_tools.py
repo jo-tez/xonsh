@@ -1,11 +1,11 @@
 """Xonsh color styling tools that simulate pygments, when it is unavailable."""
 import builtins
-import string
 from collections import defaultdict
 
 from xonsh.platform import HAS_PYGMENTS
 from xonsh.lazyasd import LazyObject
 from xonsh.color_tools import RE_BACKGROUND
+from xonsh.tools import FORMATTER
 
 
 class _TokenType(tuple):
@@ -64,9 +64,9 @@ def partial_color_tokenize(template):
     of tuples mapping the token to the string which has that color.
     These sub-strings maybe templates themselves.
     """
-    if HAS_PYGMENTS and hasattr(builtins.__xonsh__, "shell"):
+    if HAS_PYGMENTS and builtins.__xonsh__.shell is not None:
         styles = __xonsh__.shell.shell.styler.styles
-    elif hasattr(builtins.__xonsh__, "shell"):
+    elif builtins.__xonsh__.shell is not None:
         styles = DEFAULT_STYLE_DICT
     else:
         styles = None
@@ -81,7 +81,6 @@ def partial_color_tokenize(template):
 
 
 def _partial_color_tokenize_main(template, styles):
-    formatter = string.Formatter()
     bopen = "{"
     bclose = "}"
     colon = ":"
@@ -90,7 +89,7 @@ def _partial_color_tokenize_main(template, styles):
     fg = bg = None
     value = ""
     toks = []
-    for literal, field, spec, conv in formatter.parse(template):
+    for literal, field, spec, conv in FORMATTER.parse(template):
         if field is None:
             value += literal
         elif field in KNOWN_COLORS or "#" in field:

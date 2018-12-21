@@ -1,6 +1,6 @@
 **Added:**
 
-* <news item>
+* Doco about how to update xonsh and how to set and unset environment variables
 
 **Changed:**
 

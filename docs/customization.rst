@@ -1,12 +1,37 @@
-=====================
-Customizing ``xonsh``
-=====================
+==============================
+Updating and customizing xonsh
+==============================
 
 .. contents::
    :local:
 
-How do I...
-===========
+Updating xonsh
+==============
+
+How to update xonsh depend on the install method.
+
+**xonsh installed via pip**
+
+If you have installed via pip (possibly into a virtual environment),
+then you can update xonsh from within itself with the following
+command:
+
+.. code-block:: console
+
+   $ xpip install --update xonsh
+
+``xpip`` (note the "x" at the  beginning of ``xpip``) is a predefined alias pointing to the ``pip`` command associated with the Python executable running this xonsh.
+
+**xonsh installed via a package manager**
+
+If you have installed via a package manager, it is recommended to update xonsh through the  package manager's appropriate command. For example, on macOS if you have installed via homebrew, you should update like this:
+
+.. code-block:: console
+
+   $ brew upgrade xonsh
+
+Customizing xonsh - How do I...
+===============================
 
 .. _change_theme:
 
@@ -203,3 +228,36 @@ variables:
 
 .. _man page color support:
     https://wiki.archlinux.org/index.php/Color_output_in_console#less
+
+.. _xonsh_inside_emacs:
+
+...use xonsh inside Emacs?
+----------------------------------
+
+**Option A: Comint buffer**
+
+You can use xonsh as your `interactive shell in Emacs
+<https://www.gnu.org/software/emacs/manual/html_node/emacs/Interactive-Shell.html>`_
+in a Comint buffer. This way you keep all the Emacs editing power
+in the shell, but you loose xonsh's completion feature.
+
+Make sure you install xonsh with readline support and in your
+``.xonshrc`` file define
+
+.. code-block:: xonsh
+                
+    $SHELL_TYPE = 'readline'
+    
+Also, in Emacs set ``explicit-shell-file-name`` to your xonsh executable.
+
+**Option B: Ansi-term buffer**
+
+The second option is to run xonsh in an Ansi-term buffer inside
+Emacs. This way you have to switch modes if you want do Emacs-style
+editing, but you keep xonsh's impressive completion.
+
+For this it is preferred to have xonsh installed with the
+prompt-toolkit. Then you can leave ``$SHELL_TYPE`` at its default.
+
+Emacs will prompt you for the path of the xonsh exeutable when you
+start up ``ansi-term``.

@@ -37,6 +37,7 @@ import traceback
 import warnings
 import operator
 import ast
+import string
 
 # adding imports from further xonsh modules is discouraged to avoid circular
 # dependencies
@@ -272,6 +273,11 @@ class EnvPath(cabc.MutableSequence):
         elif replace:
             self._l.remove(data)
             self._l.insert(0 if front else len(self._l), data)
+
+
+@lazyobject
+def FORMATTER():
+    return string.Formatter()
 
 
 class DefaultNotGivenType(object):
@@ -750,7 +756,7 @@ def _yield_accessible_unix_file_names(path):
         try:
             if file_.is_file() and os.access(file_.path, os.X_OK):
                 yield file_.name
-        except (FileNotFoundError, NotADirectoryError):
+        except OSError:
             # broken Symlink are neither dir not files
             pass
 
@@ -1163,6 +1169,11 @@ def to_logfile_opt(x):
     the filepath if it is a writable file or None if the filepath is not
     valid, informing the user on stderr about the invalid choice.
     """
+    superclass = pathlib.PurePath
+    if PYTHON_VERSION_INFO >= (3, 6, 0):
+        superclass = os.PathLike
+    if isinstance(x, superclass):
+        x = str(x)
     if is_logfile_opt(x):
         return x
     else:
@@ -1888,7 +1899,7 @@ def intensify_colors_on_win_setter(enable):
     environment variable.
     """
     enable = to_bool(enable)
-    if hasattr(builtins.__xonsh__, "shell"):
+    if builtins.__xonsh__.shell is not None:
         if hasattr(builtins.__xonsh__.shell.shell.styler, "style_name"):
             delattr(builtins.__xonsh__.shell.shell.styler, "style_name")
     return enable
@@ -1966,6 +1977,38 @@ def RE_COMPLETE_STRING():
         + ".*?(?P=quote)$"
     )
     return re.compile(ptrn, re.DOTALL)
+
+
+def strip_simple_quotes(s):
+    """Gets rid of single quotes, double quotes, single triple quotes, and
+    single double quotes from a string, if present front and back of a string.
+    Otherwiswe, does nothing.
+    """
+    starts_single = s.startswith("'")
+    starts_double = s.startswith('"')
+    if not starts_single and not starts_double:
+        return s
+    elif starts_single:
+        ends_single = s.endswith("'")
+        if not ends_single:
+            return s
+        elif s.startswith("'''") and s.endswith("'''") and len(s) >= 6:
+            return s[3:-3]
+        elif len(s) >= 2:
+            return s[1:-1]
+        else:
+            return s
+    else:
+        # starts double
+        ends_double = s.endswith('"')
+        if not ends_double:
+            return s
+        elif s.startswith('"""') and s.endswith('"""') and len(s) >= 6:
+            return s[3:-3]
+        elif len(s) >= 2:
+            return s[1:-1]
+        else:
+            return s
 
 
 def check_for_partial_string(x):

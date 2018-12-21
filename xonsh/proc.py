@@ -1406,7 +1406,7 @@ class ProcProxyThread(threading.Thread):
                 r = self.f(self.args, sp_stdin, sp_stdout, sp_stderr, spec, spec.stack)
         except SystemExit as e:
             r = e.code if isinstance(e.code, int) else int(bool(e.code))
-        except OSError as e:
+        except OSError:
             status = still_writable(self.c2pwrite) and still_writable(self.errwrite)
             if status:
                 # stdout and stderr are still writable, so error must
@@ -2136,7 +2136,7 @@ class CommandPipeline:
             return
         if give_terminal_to(pgid):  # if gave term succeed
             self.term_pgid = pgid
-            if hasattr(builtins.__xonsh__, "shell"):
+            if builtins.__xonsh__.shell is not None:
                 # restoring sanity could probably be called whenever we return
                 # control to the shell. But it only seems to matter after a
                 # ^Z event. This *has* to be called after we give the terminal
@@ -2247,13 +2247,12 @@ class CommandPipeline:
         spec = self.spec
         rtn = self.returncode
         if (
-            not spec.is_proxy
-            and rtn is not None
+            rtn is not None
             and rtn > 0
             and builtins.__xonsh__.env.get("RAISE_SUBPROC_ERROR")
         ):
             try:
-                raise subprocess.CalledProcessError(rtn, spec.cmd, output=self.output)
+                raise subprocess.CalledProcessError(rtn, spec.args, output=self.output)
             finally:
                 # this is need to get a working terminal in interactive mode
                 self._return_terminal()

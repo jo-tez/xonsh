@@ -257,7 +257,8 @@ def _pprint_displayhook(value):
         printed_val = repr(value)
     if HAS_PYGMENTS and env.get("COLOR_RESULTS"):
         tokens = list(pygments.lex(printed_val, lexer=pyghooks.XonshLexer()))
-        print_color(tokens)
+        end = "" if env.get("SHELL_TYPE") == "prompt_toolkit2" else "\n"
+        print_color(tokens, end=end)
     else:
         print(printed_val)  # black & white case
     builtins._ = value
@@ -307,11 +308,11 @@ def premain(argv=None):
     """Setup for main xonsh entry point. Returns parsed arguments."""
     if argv is None:
         argv = sys.argv[1:]
-    setup_timings()
+    builtins.__xonsh__ = XonshSession()
+    setup_timings(argv)
     setproctitle = get_setproctitle()
     if setproctitle is not None:
         setproctitle(" ".join(["xonsh"] + argv))
-    builtins.__xonsh__ = XonshSession()
     args = parser.parse_args(argv)
     if args.help:
         parser.print_help()
@@ -461,8 +462,7 @@ def postmain(args=None):
     """Teardown for main xonsh entry point, accepts parsed arguments."""
     if ON_WINDOWS:
         setup_win_unicode_console(enable=False)
-    if hasattr(builtins.__xonsh__, "shell"):
-        del builtins.__xonsh__.shell
+    builtins.__xonsh__.shell = None
 
 
 @contextlib.contextmanager

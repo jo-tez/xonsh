@@ -4,6 +4,220 @@ Xonsh Change Log
 
 .. current developments
 
+v0.8.5
+====================
+
+**Added:**
+
+* Add alias to `base16 shell <https://github.com/chriskempson/base16-shell>`_
+
+* Installation / Usage
+    1. To install use pip
+
+    .. code-block:: bash
+
+        python3 -m pip install xontrib-base16-shell
+
+    2. Add on ``~/.xonshrc``
+
+    .. code:: python
+        :number-lines:
+
+        $BASE16_SHELL = $HOME + "/.config/base16-shell/"
+        xontrib load base16_shell
+
+
+    3. See image
+
+    .. image:: https://raw.githubusercontent.com/ErickTucto/xontrib-base16-shell/master/docs/terminal.png
+        :width: 600px
+        :alt: terminal.png
+* New ``DumbShell`` class that kicks in whenever ``$TERM == "dumb"``.
+  This usually happens in emacs. Currently, this class inherits from
+  the ``ReadlineShell`` but adds some light customization to make
+  sure that xonsh looks good in the resultant terminal emulator.
+* Aliases from foreign shells (e.g. Bash) that are more than single expressions,
+  or contain sub-shell executions, are now evaluated and run in the foreign shell.
+  Previously, xonsh would attempt to translate the alias from sh-lang into
+  xonsh. These restrictions have been removed.  For example, the following now
+  works:
+
+  .. code-block:: sh
+
+      $ source-bash 'alias eee="echo aaa \$(echo b)"'
+      $ eee
+      aaa b
+
+* New ``ForeignShellBaseAlias``, ``ForeignShellFunctionAlias``, and
+  ``ForeignShellExecAlias`` classes have been added which manage foreign shell
+  alias execution.
+
+
+**Changed:**
+
+* String aliases will now first be checked to see if they contain sub-expressions
+  that require evaluations, such as ``@(expr)``, ``$[cmd]``, etc. If they do,
+  then an ``ExecAlias`` will be constructed, rather than a simple list-of-strs
+  substitutiuon alias being used. For example:
+
+  .. code-block:: sh
+
+      $ aliases['uuu'] = "echo ccc $(echo ddd)"
+      $ aliases['uuu']
+      ExecAlias('echo ccc $(echo ddd)\n', filename='<exec-alias:uuu>')
+      $ uuu
+      ccc ddd
+
+* The ``parse_aliases()`` function now requires the shell name.
+* ``ForeignShellFunctionAlias`` now inherits from ``ForeignShellBaseAlias``
+  rather than ``object``.
+
+
+**Fixed:**
+
+* Fixed issues where the prompt-toolkit v2 shell would print an extra newline
+  after Python evaluations in interactive mode.
+
+
+
+
+v0.8.4
+====================
+
+**Added:**
+
+* Added the possibility of arbitrary paths to the help strings in ``vox activate`` and
+  ``vox remove``; also updated the documentation accordingly.
+* New ``xonsh.aliases.ExecAlias`` class enables multi-statement aliases.
+* New ``xonsh.ast.isexpression()`` function will return a boolean of whether
+  code is a simple xonsh expression or not.
+* Added top-level ``run-tests.xsh`` script for safely running the test suite.
+
+
+**Changed:**
+
+* String aliases are no longer split with ``shlex.split()``, but instead use
+  ``xonsh.lexer.Lexer.split()``.
+* Update xonsh/prompt/cwd.py _collapsed_pwd to print 2 chars if a directory begins with "."
+* test which determines whether a directory is a virtualenv
+
+  previously it used to check the existence of 'pyvenv.cfg'
+  now it checks if 'bin/python' is executable
+
+
+**Fixed:**
+
+* Fixed issue with ``and`` & ``or`` being incorrectly tokenized in implicit
+  subprocesses. Auto-wrapping of certain subprocesses will now correctly work.
+  For example::
+
+      $ echo x-and-y
+      x-and-y
+* Fix EOFError when press `control+d`
+* fix no candidates if no permission files in PATH
+* Fixed interpretation of color names with PTK2 and Pygments 2.3.
+* Several ResourceWarnings: unclosed file in tests
+* AttributeError crash when using --timings flag
+* issue #2929
+
+
+
+
+v0.8.3
+====================
+
+**Added:**
+
+* Dociumentation paragrapgh about gow to run xonsh in Emacs shell
+
+
+**Changed:**
+
+* Updated what pip requirements are needed to build the documnetaion
+* ``$XONSH_TRACEBACK_LOGFILE`` now beside strings also accepts ``os.PathLike``
+  objects.
+* Updated vended version of ``ply`` to 3.11
+* Deprecation warnings now print from stacklevel 3.
+
+
+**Fixed:**
+
+* Annotation assignment statements (e.g. ``x : int = 42``) are now supported.
+* Fixed error output wording for fg and bg commands
+* Flake8 errors
+* xonsh can now properly parse import statements with trailing comma within
+  parentheses, e.g.::
+  
+    from x import (y, z,)
+* ResourceWarning: unclosed scandir iterator in imphooks.py
+* Removed use of deprecated ``inspect.formatargspec()`` for ``inspect.signature()``
+* ``Makefile`` directive that updates vended version of ``ply``
+
+
+
+
+v0.8.2
+====================
+
+**Changed:**
+
+* Now there is only a single instance of ``string.Formatter()`` in the
+  code base, which is called ``xonsh.tools.FORMATTER``.
+
+
+**Fixed:**
+
+* f-strings (``f"{expr}"``) are now fully capable of executing xonsh expressions.
+  The one exception to this is that ``![cmd]`` and ``!(cmd)`` don't work because
+  the ``!`` character interferes with Python string formatting. If you need to
+  run subprocesses inside of f-strings, use ``$[cmd]`` and ``$(cmd)`` instead.
+* Fixed occasional "no attribute 'settitle' error"
+
+
+
+
+v0.8.1
+====================
+
+**Added:**
+
+* ``SubprocSpec`` has a new ``pipeline_index`` integer attribute that indicates
+  the commands position in a pipeline. For example, in
+
+  .. code-block:: sh
+
+    p = ![ls -l | grep x]
+
+  The ``ls`` command would have a pipeline index of 0
+  (``p.specs[0].pipeline_index == 0``) and ``grep`` would have a pipeline index
+  of 1 (``p.specs[1].pipeline_index == 1``).  This may be usefule in callable
+  alaises which recieve the spec as an argument.
+
+
+**Changed:**
+
+* Removed ``fish`` from list of supported foreign shells in the wizard.
+* Circle CI config updated to use a pinned version of ``black`` (18.9b0)
+* Pytest plugin now uses ``xonsh.main.setup()`` to setup test environment.
+* Linux platform discovery will no longer use ``platform.linux_distribution()``
+  on Python >=3.6.6. due to pending deprecation warning.
+* Updated Linux Guide as Xonsh is now available in Arch Linux official repositories.
+
+
+**Fixed:**
+
+* Builtin dynamic proxies and deprecation warning proxies were not deleting
+  attributes and items properly.
+* Fixed stdout/sdterr writing infinite recurssion error that would occur in
+  long pipelines of callable aliases.
+* Fixed a bug which under very rare conditions could cause the shell
+  to die with PermissionError exception while sending SIGSTOP signal
+  to a child process.
+* Fixed further raw string deprecation warnings thoughout the code base.
+
+
+
+
 v0.8.0
 ====================
 
