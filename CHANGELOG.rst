@@ -4,6 +4,75 @@ Xonsh Change Log
 
 .. current developments
 
+v0.8.8
+====================
+
+**Added:**
+
+* ``vox new`` has an added ``-p --interpreter`` flag for choosing the python interpreter to use for virtualenv creation
+* The default Python intrepreter vox uses to create virtual environments can be set using the ``$VOX_DEFAULT_INTERPRETER`` environment variable.
+
+
+**Changed:**
+
+* ``lib.ChainDB`` now resolves results to the type of the inputs if possible
+
+
+
+
+v0.8.7
+====================
+
+**Added:**
+
+* New xonsh syntax ``pf`` strings -- combining path strings with f-strings.
+
+  Usage:
+
+  .. code-block:: bash
+
+       gil@bad_cat ~ $ repos = 'github.com'
+       gil@bad_cat ~ $ pf"~/{repos}"
+       PosixPath('/home/gil/github.com')
+       gil@bad_cat ~ $ pf"{$HOME}"
+       PosixPath('/home/gil')
+       gil@bad_cat ~ $ pf"/home/${'US' + 'ER'}"
+       PosixPath('/home/gil')
+
+
+**Fixed:**
+
+* Set ``ls`` to ``predict_true`` in ``default_threadable_predictors``.  This prevents ``ls`` on OSX
+  from being flagged on OSX as unthreadable (incorrectly) because it relies on ``ncurses``.
+
+
+
+
+v0.8.6
+====================
+
+**Added:**
+
+* Doco about how to update xonsh and how to set and unset environment variables
+
+
+**Fixed:**
+
+* Updated behavior of the ``cat`` coreutils function so that it properly
+  handles as vareity of cases such as:
+
+    * Exits after concatenating normal files which have a finite size
+    * Continues to run for special files which do not have a size,
+      such as ``/dev/random``
+    * Is interruptable in all cases with Crtl-C.
+* Callable aliases were not properly raising a ``CalledProcessError`` when they
+  returned a non-zero exist status when ``$RAISE_SUBPROC_ERROR = True``. This has
+  been fixed.
+* Fixed interpretation of color names with PTK2 and Pygments 2.3.1.
+
+
+
+
 v0.8.5
 ====================
 
@@ -147,7 +216,7 @@ v0.8.3
 * Flake8 errors
 * xonsh can now properly parse import statements with trailing comma within
   parentheses, e.g.::
-  
+
     from x import (y, z,)
 * ResourceWarning: unclosed scandir iterator in imphooks.py
 * Removed use of deprecated ``inspect.formatargspec()`` for ``inspect.signature()``
